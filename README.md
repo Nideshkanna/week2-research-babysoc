@@ -83,7 +83,7 @@ The BabySoC integrates **just three essential modules**:
 
 📌 Think of it as a **training SoC** – small but powerful enough to teach you the principles of **integration, synchronization, and verification**.
 
-![03](./images/babysoc_block.png)
+![03](./images/babysoc_block_diagram.png)
 
 ---
 
