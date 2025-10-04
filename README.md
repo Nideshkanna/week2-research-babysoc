@@ -57,7 +57,6 @@ Every SoC is designed around a few **core components** that interact seamlessly:
    * The “nervous system” of the SoC, linking CPU ↔ Memory ↔ Peripherals.
    * Examples: **AMBA (AXI/AHB/APB)**, **Wishbone**, **TileLink**.
 
-![02](./images/soc_components1.png)
 
 📌 Together, these components form a **self-sufficient computing platform**.
 
@@ -107,7 +106,7 @@ Before diving into RTL coding and full physical design, **functional modelling**
 
 📊 **Design flow visualization:**
 
-![04](./images/design_flow.png)
+![04](./images/soc_components1.png)
 
 **Tools used:**
 
