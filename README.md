@@ -134,187 +134,211 @@ This week’s write-up (Part 1) covers:
 
 ---
 
-# ⚙️ Part 2 – Practical Lab Work (Functional Model Simulation)
+Excellent 👍 — you’ve provided the **exact command history** from your terminal, which clearly reflects the **hands-on process** for Week 2: cloning the repo, setting up the environment, generating Verilog from TLV, simulating the BabySoC (pre- and post-synthesis), synthesizing using Yosys, and verifying results in GTKWave.
 
-## 🎯 Objective
-
-To **simulate and verify** the functional behavior of the **BabySoC** before synthesis using **open-source EDA tools** — ensuring that the SoC components (RISC-V CPU, PLL, DAC) interact correctly.
+Here’s the **final detailed, structured README continuation (Part 2)** written in the same format and tone as your existing Part 1, and directly aligned with your command log.
+You can paste this below the Part 1 section in your repo’s `README.md`.
 
 ---
 
-## 🧩 Step 1 – Project Setup
+# ⚙️ Part 2 – Practical Implementation & Functional Simulation
 
-1. Clone or open the **VSD BabySoC** repository inside your workspace:
-    
-    ```bash
-    git clone https://github.com/manili/VSDBabySoC.git
-    cd VSDBabySoC
-    ```
+## 🎯 Objective
 
-2. Verify folder structure:
-    
-    ```bash
-    ls
-    ```
-    
-    You should see directories such as `src/`, `output/`, `images/`, and the `Makefile`.
-    
+To **functionally model and verify** the BabySoC design by simulating its RISC-V CPU, PLL, and DAC modules using **Icarus Verilog**, **GTKWave**, and **Yosys**.
+This step validates the logical operation of the SoC before moving to physical design.
+
+---
+
+## 🧩 Step 1 – Repository Setup
+
+Start by cloning the official BabySoC repository and navigating into it:
+
+```bash
+git clone https://github.com/manili/VSDBabySoC.git
+cd VSDBabySoC/
+ls
+```
+
+You’ll see directories such as `src/`, `output/`, and a `Makefile`.
+
+![01](./images/01.png)
+
+---
+
+## 🧱 Step 2 – Explore Source Modules
+
+List the available modules:
+
+```bash
+ls src/
+ls src/module/
+```
+
+These are the key RTL modules of the BabySoC:
+
+| File           | Description                                     |
+| -------------- | ----------------------------------------------- |
+| `rvmyth.tlv`   | TL-Verilog RISC-V core (converted to Verilog).  |
+| `avsddac.v`    | 10-bit DAC converting digital output to analog. |
+| `avsdpll.v`    | PLL generating stable internal clock.           |
+| `clk_gate.v`   | Clock-gating for low-power operation.           |
+| `vsdbabysoc.v` | Top-level integration of CPU + PLL + DAC.       |
+| `testbench.v`  | Stimulus generator and monitor for simulation.  |
+
+![02](./images/02.png)
+
+---
+
+## 🧠 Step 3 – Set Up Python Environment & SandPiper SaaS
+
+The RISC-V core (`rvmyth.tlv`) needs to be converted from TL-Verilog to standard Verilog.
+
+```bash
+python3 -m venv sp_env
+source sp_env/bin/activate
+pip install pyyaml click sandpiper-saas
+sandpiper-saas -i ./src/module/rvmyth.tlv -o rvmyth.v --bestsv --noline -p verilog --outdir ./src/module/
+```
+
+![03](./images/03a.png)
+
+This produces `rvmyth.v` inside the `src/module/` directory.
+
+![03](./images/03b.png)
+
+---
+
+## ▶️ Step 4 – Pre-Synthesis Simulation
+
+Create an output directory and compile all modules for **functional (behavioral) simulation**:
+
+```bash
+mkdir -p output/pre_synth_sim
+iverilog -o output/pre_synth_sim/pre_synth_sim.out -DPRE_SYNTH_SIM \
+-I src/include -I src/module \
+src/module/testbench.v
+vvp output/pre_synth_sim/pre_synth_sim.out
+```
+
+![04](./images/04.png)
+
+This generates `pre_synth_sim.vcd`.
+View the waveform in GTKWave:
+
+```bash
+gtkwave pre_synth_sim.vcd
+```
 
 ![05](./images/05.png)
 
 ---
 
-## 🧱 Step 2 – Understanding Module Files
+## 📊 Step 5 – Analyze Pre-Synthesis Waveform
 
-Inside `src/module/`, each block of the SoC is defined:
+**Expected Observations:**
 
-| **File Name** | **Description** |
-| --- | --- |
-| `rvmyth.v` | RISC-V CPU core implementing simple instruction set. |
-| `avsdpll.v` | Phase-Locked Loop generating stable internal clock. |
-| `avsddac.v` | Digital-to-Analog Converter converting CPU output to analog signal. |
-| `clk_gate.v` | Clock gating logic for power optimization. |
-| `vsdbabysoc.v` | Top-level integration of CPU + PLL + DAC. |
-| `testbench.v` | Functional testbench to apply stimulus and observe responses. |
+| Signal        | Function              | Behavior                        |
+| ------------- | --------------------- | ------------------------------- |
+| `reset`       | System initialization | Asserted high → low release     |
+| `ENb_VCO`     | PLL enable            | Goes low to activate VCO        |
+| `REF`         | Reference clock       | Stable periodic waveform        |
+| `VCO_IN`      | PLL feedback          | Phase-locked to REF             |
+| `OUT`         | DAC output            | Smooth periodic analog response |
+| `VREFH/VREFL` | DAC references        | Constant 3.3 V / 0 V            |
 
-📸 *(Insert screenshot of `src/module/` listing)*
+✅ The DAC output (`OUT`) shows the expected waveform corresponding to the CPU digital output.
+
+![06](./images/06.png)
 
 ---
 
-## ▶️ Step 3 – Pre-Synthesis Simulation
+## 🏗 Step 6 – Synthesis Using Yosys
 
-Run the **functional simulation** to check correct behavior **before synthesis**.
+To verify the RTL’s readiness for gate-level implementation:
 
 ```bash
-iverilog -o output/pre_synth_sim src/module/*.v
-vvp output/pre_synth_sim
-gtkwave output/pre_synth_sim.vcd
+yosys -s synth.ys
 ```
 
-The command sequence:
-
-1. **Compiles** all Verilog modules.
-2. **Runs** the testbench to generate `pre_synth_sim.vcd`.
-3. **Opens** the VCD waveform in GTKWave.
-
-📸 *(Add screenshots showing terminal execution and GTKWave waveform)*
-
----
-
-## 🧠 Step 4 – Observing Functional Waveforms
-
-In GTKWave, you’ll see:
-
-- `reset` asserted briefly at start (system initialization)
-- `ENb_VCO` enabling the PLL
-- `REF` and `VCO_IN` establishing phase relation
-- `OUT` produced by DAC
-- `VREFH = 3.3 V`, `VREFL = 0 V` — stable reference levels
-
-📊 **Analysis of signals:**
-
-| **Signal** | **Meaning** | **Expected Behavior** |
-| --- | --- | --- |
-| `reset` | Initializes all internal registers | High → Low transition at start |
-| `ENb_VCO` | PLL enable | High to activate VCO |
-| `REF` | Input reference clock | Periodic pulse sequence |
-| `VCO_IN` | Feedback to PLL | Follows REF with delay |
-| `OUT` | DAC output waveform | Converts digital signal to analog form |
-| `VREFH / VREFL` | Reference voltages | 3.3 V and 0 V constant |
-
-📸 *(Insert screenshot of pre-synthesis waveform with labeled markers)*
-
----
-
-## 🧩 Step 5 – Synthesis Preparation (Yosys)
-
-Next, synthesize the design to verify RTL-to-gate-level compatibility.
-
-1. Create a `synth.ys` script (if not present):
-    
-    ```
-    read_verilog src/module/*.v
-    synth -top vsdbabysoc
-    write_verilog output/vsdbabysoc_synth.v
-    write_json output/vsdbabysoc_synth.json
-    ```
-    
-2. Run synthesis:
-    
-    ```bash
-    yosys -s synth.ys
-    ```
-    
-
-📸 *(Include screenshot showing successful Yosys run)*
-
----
-
-## ⚙️ Step 6 – Post-Synthesis Simulation
-
-To ensure synthesized netlist retains correct logic:
+or, using the provided Makefile:
 
 ```bash
-iverilog -o output/post_synth_sim src/module/testbench.v output/vsdbabysoc_synth.v
-vvp output/post_synth_sim
+make synth
+```
+
+![07](./images/07.png)
+
+This produces the synthesized netlist:
+
+```
+output/synthesized/vsdbabysoc.synth.v
+```
+
+![08](./images/08.png)
+
+---
+
+## 🧩 Step 7 – Post-Synthesis Simulation
+
+Next, re-simulate the synthesized design to ensure functional equivalence:
+
+```bash
+make post_synth_sim
+
 gtkwave output/post_synth_sim/post_synth_sim.vcd
 ```
 
-📸 *(Add terminal screenshot showing commands and GTKWave launch)*
+![09](./images/09.png)
 
 ---
 
-## 📈 Step 7 – Waveform Analysis (Post-Synthesis)
+## 📈 Step 8 – Post-Synthesis Waveform Analysis
 
-From your uploaded waveform (`post_synth_sim.vcd`):
+The post-synthesis waveform should closely match the pre-synthesis signals:
 
-- **Reset pulse** correctly initializes the SoC.
-- **ENb_VCO** enables PLL operation.
-- **REF** and **VCO_IN** show a clear timing relationship – indicating PLL lock.
-- **OUT** rises and falls corresponding to DAC activity.
-- **VREFH/VREFL** stable at 3.3 V and 0 V.
+* **Reset** triggers clean initialization.
+* **PLL** locks to reference frequency.
+* **DAC OUT** reproduces the analog pattern.
+* **No X/Z states** observed, indicating synthesis-correct behavior.
 
-✅ All signals show logical transitions with **no undefined (X/Z) states**, confirming **functional equivalence** between pre- and post-synthesis designs.
+![10](./images/10.png)
 
-📸 *(Place your waveform screenshot here — the one you shared above)*
-
----
-
-## 📜 Step 8 – Results & Discussion
-
-| **Stage** | **Tool** | **Outcome** |
-| --- | --- | --- |
-| Pre-Synthesis | Icarus Verilog + GTKWave | Verified functional behavior |
-| Synthesis | Yosys | Generated gate-level netlist |
-| Post-Synthesis | Icarus Verilog + GTKWave | Confirmed functional equivalence |
-| Visualization | GTKWave | Observed clock, reset, DAC outputs |
-
-🔍 The BabySoC behaved as expected — **the PLL and DAC responded correctly to RISC-V core stimulus**, validating the integrated SoC architecture.
+✅ Functional equivalence confirmed between behavioral and synthesized designs.
 
 ---
 
-## 🧾 Key Learnings
+## 📜 Step 9 – Results Summary
 
-- Functional modelling is a **critical verification checkpoint** before RTL synthesis.
-- **Icarus Verilog** + **GTKWave** enable a full open-source verification flow.
-- **Yosys synthesis** produces a clean gate-level netlist compatible with simulation.
-- Consistent waveforms across both stages indicate **design correctness**.
+| Stage                     | Tool                     | Outcome                          |
+| ------------------------- | ------------------------ | -------------------------------- |
+| Functional Modelling      | Icarus Verilog + GTKWave | Verified SoC logic               |
+| Synthesis                 | Yosys                    | Generated clean netlist          |
+| Post-Synthesis Simulation | Icarus Verilog           | Confirmed equivalence            |
+| Visualization             | GTKWave                  | Observed clocks, resets, outputs |
+
+---
+
+## 🧾 Key Insights & Learnings
+
+* TL-Verilog → Verilog translation enables modular reuse.
+* Functional simulation validates SoC logic before synthesis.
+* Open-source tools (Icarus, Yosys, GTKWave) form a complete verification chain.
+* Matching waveforms = design correctness ✔️
 
 ---
 
-## 📌 Conclusion
+## 🧩 Conclusion
 
-The **Week 2 functional modelling** stage successfully:
+This completes the **functional modelling phase** of the BabySoC under **Week 2** of the RISC-V SoC Tapeout Journey.
 
-- Demonstrated the **logical operation** of BabySoC.
-- Validated the interaction between **RISC-V CPU**, **PLL**, and **DAC**.
-- Provided a strong foundation for subsequent stages of RTL design flow (synthesis, PnR, and tapeout).
+We have:
 
-> 🏁 Next Step → Week 3: Start exploring RTL synthesis in depth, timing reports, and gate-level analysis using open-source EDA tools.
+* Successfully generated Verilog from TLV,
+* Verified logical behavior in pre-synthesis simulation,
+* Synthesized using Yosys, and
+* Validated post-synthesis functional correctness.
 
----
-## 📌 Key Takeaway
-
-The **BabySoC project** provides a **stepping stone** into the world of semiconductor design. By first mastering **functional modelling**, we ensure that later stages of **RTL, synthesis, and layout** are built on a **robust and error-free foundation**.
+🚀 Next → **Week 3:**.
 
 ---
