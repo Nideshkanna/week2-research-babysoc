@@ -339,6 +339,6 @@ We have:
 * Synthesized using Yosys, and
 * Validated post-synthesis functional correctness.
 
-🚀 Next → **Week 3:**.
+🚀 Next we explore post-synthesis Gate-Level Simulation (GLS) and gain hands-on experience with Static Timing Analysis (STA) using OpenSTA in → **![Week 3:](https://github.com/Nideshkanna/week3_VSDBabySoC_GLS_STA)**. 
 
 ---
